@@ -1,5 +1,5 @@
 local ITEM_DATA = {
-	[48491] = 67117,
+	[48491] = 67117, [48500] = 67117,
     [37111] = {60512, 60513, 60514, 60515}, [23835] = 99999, [23836] = 99999, [32782] = 41301, [24390] = 31794,
     [28040] = 33662, [28041] = 33667, [28042] = 33668, [25829] = 33828,
     [24551] = 32140, [27922] = { 33511, 33513 }, [27924] = { 33511, 33513 },
@@ -154,6 +154,7 @@ local ITEM_DATA = {
 
 local icons = {
 	[132758] = 136129,
+	[135001] = 237530,
 };
 
 -- [enchantId] = procId
@@ -205,6 +206,7 @@ local COOLDOWNS_DATA = {
     [64568] = 10,
     [55382] = 15,  
     [40373] = 15,
+	[67383] = 10,
 }
 
 -- [itemId] = extraProcId
@@ -396,8 +398,15 @@ local GetCooldownInfo = function(equipmentSlot, procId)
 	local _, _, enable = GetInventoryItemCooldown("player", equipmentSlot);
 
 	if enable == 0 then
+		local cooldown = NO_COOLDOWN_ITEMS_DATA[procId];
+
+		if cooldown then
+
+			return "NO_CD", 0;
+
+		end
+
 		return "INTERNAL", COOLDOWNS_DATA[procId] or 45;
-		
 	end
 end
 
@@ -472,11 +481,15 @@ end
 
 local RemoveAura = function(allstates, equipmentSlot)
 	equipmentSlots[equipmentSlot] = nil;
-	local stateName = stformat("IW_slot%d", equipmentSlot);
+
+	local stateName = stformat("IW_Slot%d", equipmentSlot);
+
 	if allstates[stateName] then
 		allstates[stateName].show = false;
 		allstates[stateName].changed = true;
 	end
+
+	return true;
 end
 
 local InitItem = function(equipmentSlot, itemId, procId)
@@ -662,15 +675,16 @@ local OnInit = function(allstates)
 			items[itemId].stacks = 0;
 
 			local type = items[itemId].type;
-			if type == "INTERNAL" then
+			if type == "INTERNAL" or "NO_CD" then
 				local savedCooldown = LoadLastSession(allstates, equipmentSlot, itemId);
 				
-				if savedCooldown then
-					items[itemId].duration = items[itemId].cooldown;
+				if savedCooldown and savedCooldown > 0 then
+					items[itemId].duration = items[itemId].cooldown or type == "NO_CD" and 30;
 					items[itemId].expirationTime = savedCooldown + GetTime();
 				end
 			end
 		end
+
 		InitAura(allstates, equipmentSlot, itemId);
 	end
 	
